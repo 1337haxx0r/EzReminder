@@ -24,6 +24,7 @@ db = mysql.connector.connect(
 )
 cursor = db.cursor()
 reminder_list_updated = True
+active_reminder = False
 # Function to fetch reminders from the database
 def fetch_reminders():
     # Get the Unix timestamps for the start and end of the current day
@@ -85,6 +86,8 @@ def set_reminder():
 
 # Function to play the reminder
 def play_reminder(reminder_text, reminder_id, frequency):
+    global active_reminder
+    active_reminder = True
     tts = gTTS(reminder_text, lang='en')
     mp3_fp = io.BytesIO()
     tts.write_to_fp(mp3_fp)
@@ -92,12 +95,14 @@ def play_reminder(reminder_text, reminder_id, frequency):
 
     pygame.mixer.init()
     pygame.mixer.music.load(mp3_fp, 'mp3')
-    pygame.mixer.music.play(-1)  # Loop indefinitely
+    #pygame.mixer.music.play()  # Loop indefinitely
 
     show_alert(reminder_text)
 
-    while pygame.mixer.music.get_busy():
-        time_module.sleep(1)
+    while active_reminder:
+        print("check")
+        pygame.mixer.music.play()  # Loop indefinitely
+        time_module.sleep(3)
 
     # After reminder is played
     if frequency == 'one-time':
@@ -111,6 +116,8 @@ def play_reminder(reminder_text, reminder_id, frequency):
 
 # Function to mute the reminder sound
 def mute_reminder():
+    global active_reminder
+    active_reminder = False
     pygame.mixer.music.stop()
     hide_alert()
     update_reminder_list()  # Update the reminder list after muting the reminder

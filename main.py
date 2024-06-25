@@ -23,7 +23,7 @@ db = mysql.connector.connect(
     charset=config['database']['charset']
 )
 cursor = db.cursor()
-
+reminder_list_updated = True
 # Function to fetch reminders from the database
 def fetch_reminders():
     # Get the Unix timestamps for the start and end of the current day
@@ -117,16 +117,20 @@ def mute_reminder():
 
 # Function to update the reminder list in the GUI
 def update_reminder_list():
+    global reminder_list_updated
     reminder_list.delete(0, ttk.END)
     reminders = fetch_reminders()
     for reminder in reminders:
         reminder_time_str = time_module.strftime('%H:%M', time_module.localtime(reminder[3]))
         reminder_list.insert(ttk.END, f"{reminder[1]} at {reminder_time_str} ({reminder[2]})")
-
+    reminder_list_updated = True
 # Function to monitor reminders
 def monitor_reminders():
+    global reminder_list_updated
     while True:
-        reminders = fetch_reminders()
+        if reminder_list_updated:
+            reminders = fetch_reminders()
+            reminder_list_updated = False  # Reset the flag after fetching the reminders
         if reminders:
             next_reminder = reminders[0]
             current_time_seconds = int(datetime.now().timestamp())  # Get current time in local timezone
@@ -150,6 +154,8 @@ def show_alert(reminder_text):
     alert_label = ttk.Label(alert_window, text=reminder_text, font=("Helvetica", 20), background="red", foreground="white", anchor="center")
     alert_label.pack(expand=True, fill="both")
     alert_window.bind("<Button-1>", lambda e: mute_reminder())
+    alert_window.bind("<Destroy>", lambda e: mute_reminder())
+
 
 # Function to hide alert message
 def hide_alert():

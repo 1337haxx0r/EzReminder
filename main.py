@@ -89,38 +89,48 @@ def play_reminder(reminder_text, reminder_id, frequency):
     global active_reminder
     active_reminder = True
     tts = gTTS(reminder_text, lang='en')
-    mp3_fp = io.BytesIO()
-    tts.write_to_fp(mp3_fp)
-    mp3_fp.seek(0)
+    mp3_fp1 = io.BytesIO()
+    mp3_fp2 = io.BytesIO()
+    tts.write_to_fp(mp3_fp1)
+    tts.write_to_fp(mp3_fp2)
+    mp3_fp1.seek(0)
+    mp3_fp2.seek(0)
 
     pygame.mixer.init()
-    pygame.mixer.music.load(mp3_fp, 'mp3')
-    #pygame.mixer.music.play()  # Loop indefinitely
-
+    pygame.mixer.music.load(mp3_fp1, 'mp3')
+    sound = pygame.mixer.Sound(mp3_fp2)  # Create a Sound object
+    length = round(sound.get_length())
+    print(f"Length of reminder: {round(sound.get_length())} seconds")  # Print the length of the reminder
+    print(F"Waiting for reminder to finish... in {length + 3}")
     show_alert(reminder_text)
 
-    while active_reminder:
-        print("check")
-        pygame.mixer.music.play()  # Loop indefinitely
-        time_module.sleep(3)
-
-    # After reminder is played
     if frequency == 'one-time':
         remove_reminder_from_db(reminder_id)
+        update_reminder_list()  # Update the reminder list after playing the reminder
     elif frequency == '24hr':
         new_time = int(time_module.time()) + 24 * 3600
         update_reminder_time(reminder_id, new_time)
 
+    while active_reminder:
+        pygame.mixer.music.play()  # Play the reminder once
+        time_module.sleep(length + 3)
+    print("Reminder finished playing")
+    # After reminder is played
+
+
+
     hide_alert()
-    update_reminder_list()  # Update the reminder list after playing the reminder
+
 
 # Function to mute the reminder sound
 def mute_reminder():
     global active_reminder
     active_reminder = False
+    print("Muting reminder...")
     pygame.mixer.music.stop()
     hide_alert()
-    update_reminder_list()  # Update the reminder list after muting the reminder
+    print(active_reminder)
+
 
 # Function to update the reminder list in the GUI
 def update_reminder_list():

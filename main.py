@@ -100,8 +100,6 @@ def play_reminder(reminder_text, reminder_id, frequency):
     pygame.mixer.music.load(mp3_fp1, 'mp3')
     sound = pygame.mixer.Sound(mp3_fp2)  # Create a Sound object
     length = round(sound.get_length())
-    print(f"Length of reminder: {round(sound.get_length())} seconds")  # Print the length of the reminder
-    print(F"Waiting for reminder to finish... in {length + 3}")
     show_alert(reminder_text)
 
     if frequency == 'one-time':
@@ -114,22 +112,17 @@ def play_reminder(reminder_text, reminder_id, frequency):
     while active_reminder:
         pygame.mixer.music.play()  # Play the reminder once
         time_module.sleep(length + 3)
-    print("Reminder finished playing")
-    # After reminder is played
 
-
-
-    hide_alert()
+    hide_alert()  # do I need this?
 
 
 # Function to mute the reminder sound
 def mute_reminder():
     global active_reminder
     active_reminder = False
-    print("Muting reminder...")
     pygame.mixer.music.stop()
     hide_alert()
-    print(active_reminder)
+
 
 
 # Function to update the reminder list in the GUI
@@ -151,7 +144,6 @@ def monitor_reminders():
         if reminders:
             next_reminder = reminders[0]
             current_time_seconds = int(datetime.now().timestamp())  # Get current time in local timezone
-            print(next_reminder[3], current_time_seconds)
             if next_reminder[3] <= current_time_seconds:
                 play_reminder(next_reminder[1], next_reminder[0], next_reminder[2])
                 if next_reminder[2] == 'one-time':

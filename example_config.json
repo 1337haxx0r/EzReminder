@@ -5,5 +5,9 @@
         "password": "password",
         "database": "database",
         "charset": "utf8"
+    },
+    "app": {
+        "title": "Reminder System",
+        "icon": "icon.ico"
     }
 }

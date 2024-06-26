@@ -89,6 +89,7 @@ def get_reminder_by_id(reminder_id):
     cursor.execute("SELECT id, text, frequency, time FROM reminders WHERE id = %s", (reminder_id,))
     return cursor.fetchone()
 
+
 # Function to add a reminder to the database
 def add_reminder_to_db(reminder_text, reminder_time, frequency):
     """
@@ -182,7 +183,6 @@ def set_reminder():
     # Fetch the date from the calendar widget
     reminder_date_str = calendar_entry.entry.get()
 
-
     # Parse the date string into a datetime.date object
     reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
 
@@ -192,7 +192,6 @@ def set_reminder():
     # Check if the reminder time is in the past for 24hr frequency and add 24 hours to the reminder time
     if frequency == '24hr' and reminder_datetime < datetime.now():
         reminder_datetime += timedelta(days=1)
-
 
     # Convert the datetime object to a Unix timestamp
     reminder_timestamp = int(reminder_datetime.timestamp())
@@ -206,7 +205,8 @@ def set_reminder():
     calendar_entry.entry.insert(0, time_module.strftime("%Y-%m-%d"))  # Set default date to current system date
 
     # Create a new label underneath the datetime_label
-    message_label = ttk.Label(root, text=f"Reminder was successfully added for {reminder_date} at {reminder_time}", font=("Helvetica", 10), foreground="white", background="green", anchor="center")
+    message_label = ttk.Label(root, text=f"Reminder was successfully added for {reminder_date} at {reminder_time}",
+                              font=("Helvetica", 10), foreground="white", background="green", anchor="center")
     message_label.grid(row=4, column=1, columnspan=6, pady=10)
 
     # Schedule a function to destroy the label after 5 seconds (5000 milliseconds)
@@ -423,8 +423,15 @@ def update_datetime():
 
 # Creating the GUI
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
-root.title("Reminder System")  # Set the title of the window to "Reminder System"
-root.geometry("750x300")  # Set the size of the window to 620x300 pixels
+root.title(config['app']['title'])  # Set the title of the window to "Reminder System"
+root.geometry("750x300")  # Set the size of the window to 700x300 pixels
+
+# check if icon file is present in the directory
+# if not, set the default icon
+try:
+    root.iconbitmap("icon/" + config['app']['icon'])  # Set the icon of the window to "icon.ico"
+except:
+    pass
 
 alert_window = None  # Initialize the alert window variable to None. This will be used to store the alert window
 # object when a reminder is played.
@@ -433,18 +440,19 @@ datetime_label = ttk.Label(root, text="", font=("Helvetica", 16))  # Create a la
 datetime_label.grid(row=0, column=0, columnspan=6, pady=10)  # Add the label to the window
 
 reminder_entry = ttk.Entry(root, width=50)  # Create an entry field for the reminder text
-reminder_entry.grid(row=2, column=1,padx=10)  # Add the entry field to the window
+reminder_entry.grid(row=2, column=1, padx=10)  # Add the entry field to the window
 
 time_entry = ttk.Entry(root, width=10)  # Create an entry field for the reminder time
 time_entry.grid(row=2, column=4, padx=5)  # Add the entry field to the window
-time_entry.insert(0, time_module.strftime("%H:%M"))  # Set the default value of the entry field to the current system time
+time_entry.insert(0,
+                  time_module.strftime("%H:%M"))  # Set the default value of the entry field to the current system time
 
 calendar_entry = ttk.DateEntry(root, style='success.TCalendar', width=10)  # Create a calendar widget
 calendar_entry.grid(row=2, column=3, padx=5)  # Add the calendar widget to the window
 
-
 frequency_var = ttk.StringVar(value='one-time')  # Create a variable to store the frequency of the reminder
-frequency_menu = ttk.Combobox(root, textvariable=frequency_var, values=['one-time', '24hr'], width=8)  # Create a dropdown menu for the frequency of the reminder
+frequency_menu = ttk.Combobox(root, textvariable=frequency_var, values=['one-time', '24hr'],
+                              width=8)  # Create a dropdown menu for the frequency of the reminder
 frequency_menu.grid(row=2, column=5, )  # Add the dropdown menu to the window
 
 set_button = ttk.Button(root, text="Set Reminder", command=set_reminder)  # Create a button to set a new reminder

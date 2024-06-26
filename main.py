@@ -189,6 +189,11 @@ def set_reminder():
     # Combine the date and time into a datetime object
     reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
 
+    # Check if the reminder time is in the past for 24hr frequency and add 24 hours to the reminder time
+    if frequency == '24hr' and reminder_datetime < datetime.now():
+        reminder_datetime += timedelta(days=1)
+
+
     # Convert the datetime object to a Unix timestamp
     reminder_timestamp = int(reminder_datetime.timestamp())
 

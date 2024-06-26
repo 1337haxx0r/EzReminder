@@ -6,6 +6,7 @@ import ttkbootstrap as ttk  # Used for creating GUIs
 # Listbox: used for creating a listbox widget,
 # Toplevel: used for creating new windows
 from tkinter import messagebox, Listbox, Toplevel
+
 import time as time_module  # Used for handling time-related tasks
 from threading import Thread  # Used for creating and managing new threads
 from gtts import gTTS  # Google Text-to-Speech: used for converting text into speech
@@ -15,8 +16,7 @@ import io  # Used for handling the I/O operations
 
 # datetime: used for manipulating dates and times,
 # time: used for encapsulating
-from datetime import datetime, time
-
+from datetime import datetime, time, timedelta
 
 # config file
 with open('config.json') as config_file:
@@ -44,6 +44,8 @@ reminder_list_updated = True
 # It is initially set to False as no reminder is being played when the program starts.
 active_reminder = False
 
+current_date = datetime.today().date()
+
 
 # Function to fetch reminders from the database
 def fetch_reminders():
@@ -68,6 +70,24 @@ def fetch_reminders():
                    (start_of_day, end_of_day))
     return cursor.fetchall()
 
+
+# get reminder by id
+def get_reminder_by_id(reminder_id):
+    """
+    This function fetches a reminder from the database by its id.
+
+    It takes one parameter: the id of the reminder to fetch.
+    It executes a SQL query to fetch the reminder with the given id from the 'reminders' table in the database.
+    The function returns the fetched reminder as a tuple, where the tuple contains the id, text, frequency, and time of the reminder.
+
+    Parameters:
+        reminder_id (int): The id of the reminder to fetch.
+
+    Returns:
+        tuple: A tuple containing the id, text, frequency, and time of the reminder.
+    """
+    cursor.execute("SELECT id, text, frequency, time FROM reminders WHERE id = %s", (reminder_id,))
+    return cursor.fetchone()
 
 # Function to add a reminder to the database
 def add_reminder_to_db(reminder_text, reminder_time, frequency):
@@ -155,26 +175,30 @@ def set_reminder():
 
     try:
         reminder_hour, reminder_minute = map(int, reminder_time.split(':'))
-        reminder_seconds = reminder_hour * 3600 + reminder_minute * 60
     except ValueError:
         messagebox.showerror("Invalid Time Format", "Please enter the time in HH:MM format.")
         return
 
-    current_time = time_module.localtime()
-    current_seconds = current_time.tm_hour * 3600 + current_time.tm_min * 60 + current_time.tm_sec
+    # Fetch the date from the calendar widget
+    reminder_date_str = calendar_entry.entry.get()
 
-    delay = reminder_seconds - current_seconds
-    if delay < 0:
-        delay = 0  # If the reminder time is past, set the delay to 0
 
-    # Convert the delay to a Unix timestamp
-    reminder_timestamp = int(time_module.time()) + delay
+    # Parse the date string into a datetime.date object
+    reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
+
+    # Combine the date and time into a datetime object
+    reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
+
+    # Convert the datetime object to a Unix timestamp
+    reminder_timestamp = int(reminder_datetime.timestamp())
 
     add_reminder_to_db(reminder_text, reminder_timestamp, frequency)
     update_reminder_list()
     reminder_entry.delete(0, ttk.END)  # Clear the reminder text field after adding
     time_entry.delete(0, ttk.END)
     time_entry.insert(0, time_module.strftime("%H:%M"))  # Set default time to current system time
+    calendar_entry.entry.delete(0, ttk.END)  # Clear the calendar widget after adding
+    calendar_entry.entry.insert(0, time_module.strftime("%Y-%m-%d"))  # Set default date to current system date
 
 
 # Function to play the reminder
@@ -216,8 +240,21 @@ def play_reminder(reminder_text, reminder_id, frequency):
         remove_reminder_from_db(reminder_id)
         update_reminder_list()  # Update the reminder list after playing the reminder
     elif frequency == '24hr':
-        new_time = int(time_module.time()) + 24 * 3600
+        # Fetch the original time of the reminder from the database
+        fetch_reminder = get_reminder_by_id(reminder_id)
+        original_time = fetch_reminder[3]
+
+        # Convert the original time to a datetime object
+        original_datetime = datetime.fromtimestamp(original_time)
+
+        # Add 24 hours to the original datetime
+        new_datetime = original_datetime + timedelta(hours=24)
+
+        # Convert the new datetime back to a Unix timestamp
+        new_time = int(new_datetime.timestamp())
+
         update_reminder_time(reminder_id, new_time)
+        update_reminder_list()  # Update the reminder list after playing the reminder
 
     while active_reminder:
         pygame.mixer.music.play()  # Play the reminder once
@@ -359,15 +396,23 @@ def update_datetime():
     Returns:
         None
     """
+    global current_date
     current_time = time_module.strftime("%Y-%m-%d %H:%M:%S", time_module.localtime())
     datetime_label.config(text=current_time)
+
+    # Check if the date has changed
+    new_date = datetime.today().date()
+    if new_date != current_date:
+        update_reminder_list()
+        current_date = new_date
+
     root.after(1000, update_datetime)  # Update every second
 
 
 # Creating the GUI
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
 root.title("Reminder System")  # Set the title of the window to "Reminder System"
-root.geometry("620x300")  # Set the size of the window to 620x300 pixels
+root.geometry("750x300")  # Set the size of the window to 620x300 pixels
 
 alert_window = None  # Initialize the alert window variable to None. This will be used to store the alert window
 # object when a reminder is played.
@@ -375,24 +420,26 @@ alert_window = None  # Initialize the alert window variable to None. This will b
 datetime_label = ttk.Label(root, text="", font=("Helvetica", 16))  # Create a label to display the current date and time
 datetime_label.grid(row=0, column=0, columnspan=6, pady=10)  # Add the label to the window
 
-reminder_entry = ttk.Entry(root, width=30)  # Create an entry field for the reminder text
-reminder_entry.grid(row=1, column=1, padx=10)  # Add the entry field to the window
+reminder_entry = ttk.Entry(root, width=50)  # Create an entry field for the reminder text
+reminder_entry.grid(row=1, column=1,padx=10)  # Add the entry field to the window
 
 time_entry = ttk.Entry(root, width=10)  # Create an entry field for the reminder time
-time_entry.grid(row=1, column=3, padx=10)  # Add the entry field to the window
-time_entry.insert(0,
-                  time_module.strftime("%H:%M"))  # Set the default value of the entry field to the current system time
+time_entry.grid(row=1, column=4, padx=5)  # Add the entry field to the window
+time_entry.insert(0, time_module.strftime("%H:%M"))  # Set the default value of the entry field to the current system time
+
+calendar_entry = ttk.DateEntry(root, style='success.TCalendar', width=10)  # Create a calendar widget
+calendar_entry.grid(row=1, column=3, padx=5)  # Add the calendar widget to the window
+
 
 frequency_var = ttk.StringVar(value='one-time')  # Create a variable to store the frequency of the reminder
-frequency_menu = ttk.Combobox(root, textvariable=frequency_var,
-                              values=['one-time', '24hr'])  # Create a dropdown menu for the frequency of the reminder
-frequency_menu.grid(row=1, column=4, padx=10)  # Add the dropdown menu to the window
+frequency_menu = ttk.Combobox(root, textvariable=frequency_var, values=['one-time', '24hr'], width=8)  # Create a dropdown menu for the frequency of the reminder
+frequency_menu.grid(row=1, column=5, )  # Add the dropdown menu to the window
 
 set_button = ttk.Button(root, text="Set Reminder", command=set_reminder)  # Create a button to set a new reminder
-set_button.grid(row=1, column=5, padx=10)  # Add the button to the window
+set_button.grid(row=1, column=6, padx=10)  # Add the button to the window
 
-reminder_list = Listbox(root, width=100)  # Create a listbox to display the list of reminders
-reminder_list.grid(row=2, column=1, columnspan=5, pady=10, padx=10)  # Add the listbox to the window
+reminder_list = Listbox(root, width=120)  # Create a listbox to display the list of reminders
+reminder_list.grid(row=2, column=1, columnspan=7, pady=10, padx=10)  # Add the listbox to the window
 
 update_reminder_list()  # Update the list of reminders
 

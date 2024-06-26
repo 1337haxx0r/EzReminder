@@ -9,6 +9,7 @@ EzReminder is a Python-based reminder system with a user interface that reads re
 - **Text-to-Speech**: Reads reminders aloud until muted.
 - **MySQL Integration**: Stores reminders in a MySQL database.
 - **Frequency Options**: Supports one-time reminders and daily recurring reminders.
+- **Choose reminder date and time**: Set the reminder time using and date using a date picker.
 
 ## Requirements
 
@@ -41,7 +42,7 @@ EzReminder is a Python-based reminder system with a user interface that reads re
        `frequency` enum('one-time','24hr') NOT NULL,
        `time` bigint(20) NOT NULL,
        PRIMARY KEY (`id`)
-     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8;
      ```
 
 4. Update the MySQL connection settings in the `main.py` file:
@@ -50,7 +51,8 @@ EzReminder is a Python-based reminder system with a user interface that reads re
        'user': 'your_username',
        'password': 'your_password',
        'host': 'localhost',
-       'database': 'reminders_db'
+       'database': 'reminders_db',
+       'charset': 'utf8'
    }
    ```
 

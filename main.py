@@ -425,6 +425,7 @@ def update_datetime():
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
 root.title(config['app']['title'])  # Set the title of the window to "Reminder System"
 root.geometry("750x300")  # Set the size of the window to 700x300 pixels
+root.resizable(False, False)  # Disable resizing of the window
 
 # check if icon file is present in the directory
 # if not, set the default icon

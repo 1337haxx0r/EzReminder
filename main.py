@@ -383,4 +383,7 @@ monitor_thread.start()  # Start the thread
 # Start updating date and time
 update_datetime()  # Update the date and time display
 
+progressbar = ttk.Progressbar(root, length=200)
+progressbar.grid(row=5, column=0, columnspan=7, pady=10)  # Adjust row and column as needed
+
 root.mainloop()  # Start the main event loop of the window

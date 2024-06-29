@@ -2,6 +2,10 @@
 import json  # Used for parsing and manipulating JSON data
 import ttkbootstrap as ttk  # Used for creating GUIs
 
+import UpdateManager
+from DatabaseManger import *
+from UpdateManager import *
+
 # messagebox: used for displaying messages to the user,
 # Listbox: used for creating a listbox widget,
 # Toplevel: used for creating new windows
@@ -22,17 +26,9 @@ from datetime import datetime, time, timedelta
 with open('config.json') as config_file:
     config = json.load(config_file)
 
-# Database connection
-db = mysql.connector.connect(
-    host=config['database']['host'],
-    user=config['database']['user'],
-    password=config['database']['password'],
-    database=config['database']['database'],
-    charset=config['database']['charset']
-)
-# Create a cursor object using the connection object returned by mysql.connector.connect()
-# The cursor is used to execute SQL commands.
-cursor = db.cursor()
+db_manager = DataBaseManager(config['database'])
+start_of_day = datetime.combine(datetime.today(), time.min).timestamp()
+end_of_day = datetime.combine(datetime.today(), time.max).timestamp()
 
 # A flag to indicate whether the reminder list has been updated.
 # This is used in the 'monitor_reminders' function to check if it needs to fetch the reminders from the database again.
@@ -45,110 +41,6 @@ reminder_list_updated = True
 active_reminder = False
 
 current_date = datetime.today().date()
-
-
-# Function to fetch reminders from the database
-def fetch_reminders():
-    """
-    This function fetches reminders that are scheduled for the current day from the database.
-
-    It first calculates the Unix timestamps for the start and end of the current day.
-    Then, it executes a SQL query to fetch reminders where the time is between the start and end of the current day.
-    The reminders are sorted in ascending order by time.
-    The function returns the fetched reminders as a list of tuples, where each tuple represents a reminder.
-
-    Returns:
-        list: A list of tuples, where each tuple contains the id, text, frequency, and time of a reminder.
-    """
-
-    # Get the Unix timestamps for the start and end of the current day
-    start_of_day = datetime.combine(datetime.today(), time.min).timestamp()
-    end_of_day = datetime.combine(datetime.today(), time.max).timestamp()
-
-    # Fetch reminders that are scheduled for today
-    cursor.execute("SELECT id, text, frequency, time FROM reminders WHERE time >= %s AND time <= %s ORDER BY time ASC",
-                   (start_of_day, end_of_day))
-    return cursor.fetchall()
-
-
-# get reminder by id
-def get_reminder_by_id(reminder_id):
-    """
-    This function fetches a reminder from the database by its id.
-
-    It takes one parameter: the id of the reminder to fetch.
-    It executes a SQL query to fetch the reminder with the given id from the 'reminders' table in the database.
-    The function returns the fetched reminder as a tuple, where the tuple contains the id, text, frequency, and time of the reminder.
-
-    Parameters:
-        reminder_id (int): The id of the reminder to fetch.
-
-    Returns:
-        tuple: A tuple containing the id, text, frequency, and time of the reminder.
-    """
-    cursor.execute("SELECT id, text, frequency, time FROM reminders WHERE id = %s", (reminder_id,))
-    return cursor.fetchone()
-
-
-# Function to add a reminder to the database
-def add_reminder_to_db(reminder_text, reminder_time, frequency):
-    """
-    This function adds a new reminder to the database.
-
-    It takes three parameters: the text of the reminder, the time of the reminder, and the frequency of the reminder.
-    It then executes a SQL query to insert these values into the 'reminders' table in the database.
-    After executing the query, it commits the changes to the database.
-
-    Parameters:
-        reminder_text (str): The text of the reminder.
-        reminder_time (int): The Unix timestamp of the reminder.
-        frequency (str): The frequency of the reminder. Can be 'one-time' or '24hr'.
-
-    Returns:
-        None
-    """
-    cursor.execute("INSERT INTO reminders (text, frequency, time) VALUES (%s, %s, %s)",
-                   (reminder_text, frequency, reminder_time))
-    db.commit()
-
-
-# Function to remove a reminder from the database
-def remove_reminder_from_db(reminder_id):
-    """
-    This function removes a reminder from the database.
-
-    It takes one parameter: the id of the reminder to be removed.
-    It then executes a SQL query to delete the reminder with the given id from the 'reminders' table in the database.
-    After executing the query, it commits the changes to the database.
-
-    Parameters:
-        reminder_id (int): The id of the reminder to be removed.
-
-    Returns:
-        None
-    """
-    cursor.execute("DELETE FROM reminders WHERE id = %s", (reminder_id,))
-    db.commit()
-
-
-# Function to update reminder time in the database for 24hr frequency
-def update_reminder_time(reminder_id, new_time):
-    """
-    This function updates the time of a reminder in the database.
-
-    It takes two parameters: the id of the reminder to be updated and the new Unix timestamp for the reminder.
-    It then executes a SQL query to update the time of the reminder with the given id in the 'reminders' table in the database.
-    After executing the query, it commits the changes to the database.
-
-    Parameters:
-        reminder_id (int): The id of the reminder to be updated.
-        new_time (int): The new Unix timestamp for the reminder.
-
-    Returns:
-        None
-    """
-    cursor.execute("UPDATE reminders SET time = %s WHERE id = %s", (new_time, reminder_id))
-    db.commit()
 
 
 # Function to set a reminder
@@ -196,7 +88,7 @@ def set_reminder():
     # Convert the datetime object to a Unix timestamp
     reminder_timestamp = int(reminder_datetime.timestamp())
 
-    add_reminder_to_db(reminder_text, reminder_timestamp, frequency)
+    db_manager.add_reminder_to_db(reminder_text, reminder_timestamp, frequency)
     update_reminder_list()
     reminder_entry.delete(0, ttk.END)  # Clear the reminder text field after adding
     time_entry.delete(0, ttk.END)
@@ -249,11 +141,11 @@ def play_reminder(reminder_text, reminder_id, frequency):
     show_alert(reminder_text)
 
     if frequency == 'one-time':
-        remove_reminder_from_db(reminder_id)
+        db_manager.remove_reminder_from_db(reminder_id)
         update_reminder_list()  # Update the reminder list after playing the reminder
     elif frequency == '24hr':
         # Fetch the original time of the reminder from the database
-        fetch_reminder = get_reminder_by_id(reminder_id)
+        fetch_reminder = db_manager.get_reminder_by_id(reminder_id)
         original_time = fetch_reminder[3]
 
         # Convert the original time to a datetime object
@@ -265,7 +157,7 @@ def play_reminder(reminder_text, reminder_id, frequency):
         # Convert the new datetime back to a Unix timestamp
         new_time = int(new_datetime.timestamp())
 
-        update_reminder_time(reminder_id, new_time)
+        db_manager.update_reminder_time(reminder_id, new_time)
         update_reminder_list()  # Update the reminder list after playing the reminder
 
     while active_reminder:
@@ -308,7 +200,7 @@ def update_reminder_list():
     """
     global reminder_list_updated
     reminder_list.delete(0, ttk.END)
-    reminders = fetch_reminders()
+    reminders = db_manager.fetch_reminders(start_of_day, end_of_day)
     for reminder in reminders:
         reminder_time_str = time_module.strftime('%H:%M', time_module.localtime(reminder[3]))
         reminder_list.insert(ttk.END, f"{reminder[1]} at {reminder_time_str} ({reminder[2]})")
@@ -335,7 +227,7 @@ def monitor_reminders():
     global reminder_list_updated
     while True:
         if reminder_list_updated:
-            reminders = fetch_reminders()
+            reminders = db_manager.fetch_reminders(start_of_day, end_of_day)
             reminder_list_updated = False  # Reset the flag after fetching the reminders
         if reminders:
             next_reminder = reminders[0]
@@ -343,10 +235,10 @@ def monitor_reminders():
             if next_reminder[3] <= current_time_seconds:
                 play_reminder(next_reminder[1], next_reminder[0], next_reminder[2])
                 if next_reminder[2] == 'one-time':
-                    remove_reminder_from_db(next_reminder[0])
+                    db_manager.remove_reminder_from_db(next_reminder[0])
                 elif next_reminder[2] == '24hr':
                     new_time = int(datetime.now().timestamp()) + 24 * 3600
-                    update_reminder_time(next_reminder[0], new_time)
+                    db_manager.update_reminder_time(next_reminder[0], new_time)
         time_module.sleep(1)  # Check every second
 
 

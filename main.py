@@ -9,7 +9,7 @@ from UpdateManager import *
 # messagebox: used for displaying messages to the user,
 # Listbox: used for creating a listbox widget,
 # Toplevel: used for creating new windows
-from tkinter import messagebox, Listbox, Toplevel
+from tkinter import messagebox, Listbox, Toplevel, Menu
 
 import time as time_module  # Used for handling time-related tasks
 from threading import Thread  # Used for creating and managing new threads
@@ -317,6 +317,27 @@ def update_datetime():
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
 root.title(config['app']['title'])  # Set the title of the window to "Reminder System"
 root.geometry("750x300")  # Set the size of the window to 700x300 pixels
+
+
+
+top_menu = Menu(root)
+root.config(menu=top_menu)
+
+
+root.file_menu = Menu(top_menu)
+top_menu.add_cascade(label='Application', menu=root.file_menu)
+root.file_menu.add_command(label='Settings')
+root.file_menu.add_command(label='Change Theme')
+root.file_menu.add_separator()
+root.file_menu.add_command(label='Exit', command=root.quit)
+
+root.help_menu = Menu(top_menu)
+top_menu.add_cascade(label='Help', menu=root.help_menu)
+root.help_menu.add_command(label='About')
+root.help_menu.add_command(label='Check for updates', command=lambda: UpdateManager.check_for_updates(config['app'], progressbar, root))
+
+
+
 
 # check if icon file is present in the directory
 # if not, set the default icon

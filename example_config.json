@@ -8,6 +8,7 @@
     },
     "app": {
         "title": "Reminder System",
-        "icon": "icon.ico"
+        "icon": "icon.ico",
+		"version": "v0.9.8-beta"
     }
 }

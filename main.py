@@ -1,5 +1,4 @@
 # Importing necessary libraries
-import json  # Used for parsing and manipulating JSON data
 import ttkbootstrap as ttk  # Used for creating GUIs
 
 import UpdateManager

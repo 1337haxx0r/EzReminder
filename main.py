@@ -383,7 +383,7 @@ def open_settings():
 
 # Creating the GUI
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
-root.title(config['app']['title'])  # Set the title of the window to "Reminder System"
+root.title(config['app']['title'] + ' | ' + config['app']['version'])  # Set the title of the window to "Reminder System"
 root.geometry("750x300")  # Set the size of the window to 700x300 pixels
 root.resizable(False, False)  # Disable resizing of the window
 

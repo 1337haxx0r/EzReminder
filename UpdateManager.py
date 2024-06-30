@@ -6,7 +6,20 @@ import time
 from tkinter import messagebox
 import json
 
+
 def check_for_updates(config, progressbar, root):
+    """
+    Checks for updates to the application by comparing the current version with the latest release on GitHub.
+
+    Parameters
+    ----------
+    config : dict
+        The application configuration, including the current version.
+    progressbar : tkinter.ttk.Progressbar
+        The progress bar widget to display the download progress.
+    root : tkinter.Tk
+        The root window of the application.
+    """
     # Get the latest release from your GitHub repository
     response = requests.get('https://api.github.com/repos/1337haxx0r/EzReminder/releases/latest', stream=True)
 
@@ -75,13 +88,22 @@ def check_for_updates(config, progressbar, root):
 
         update_version_in_config(latest_version)
         progressbar.grid_forget()
-        messagebox.showinfo("Update", "Update has been downloaded. Please replace all necessary files and restart the application.")
+        messagebox.showinfo("Update",
+                            "Update has been downloaded. Please replace all necessary files and restart the application.")
 
     elif latest_version == config['version']:
         messagebox.showinfo("Check updates", "You are already using the latest version: " + current_version)
 
 
 def get_exe_directory():
+    """
+    Gets the directory where the current .exe file is located.
+
+    Returns
+    -------
+    str
+        The directory where the .exe file is located.
+    """
     # Get the absolute path of the current .exe file
     current_exe_path = os.path.abspath(sys.argv[0])
 
@@ -90,14 +112,27 @@ def get_exe_directory():
 
     return exe_directory
 
+
 def update_version_in_config(latest_version):
-    # Open the config.json file in read mode
+    """
+    Updates the version number in the application configuration.
+
+    Parameters
+    ----------
+    latest_version : str
+        The latest version number.
+    """
+    # Open the configuration file in read mode
     with open('config.json', 'r') as config_file:
+        # Load the configuration data
         config_data = json.load(config_file)
 
-    # Update the app.version value
-    config_data['app']['version'] = latest_version
+    # Update the version number in the configuration data
+    config_data['version'] = latest_version
 
-    # Open the config.json file in write mode
+    # Open the configuration file in write mode
     with open('config.json', 'w') as config_file:
+        # Write the updated configuration data back to the file
         json.dump(config_data, config_file, indent=4)
+
+    print("Updated the version number in the configuration file.")

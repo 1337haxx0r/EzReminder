@@ -1,8 +1,15 @@
 # Importing necessary libraries
 import ttkbootstrap as ttk  # Used for creating GUIs
 
+# Importing the UpdateManager module. This module is used for managing updates to the application.
 import UpdateManager
+
+# Importing all classes, functions, and variables from the DatabaseManager module.
+# This module is used for managing the database of the application.
 from DatabaseManger import *
+
+# Importing the UpdateManager module again. This is redundant as the module has already been imported above.
+# It's generally a good practice to avoid duplicate imports.
 from UpdateManager import *
 
 # messagebox: used for displaying messages to the user,
@@ -87,10 +94,10 @@ def set_reminder():
     # Convert the datetime object to a Unix timestamp
     reminder_timestamp = int(reminder_datetime.timestamp())
 
-    db_manager.add_reminder_to_db(reminder_text, reminder_timestamp, frequency)
-    update_reminder_list()
+    db_manager.add_reminder_to_db(reminder_text, reminder_timestamp, frequency)  # Add the reminder to the database
+    update_reminder_list()  # Update the reminder list after adding
     reminder_entry.delete(0, ttk.END)  # Clear the reminder text field after adding
-    time_entry.delete(0, ttk.END)
+    time_entry.delete(0, ttk.END)  # Clear the time widget after adding
     time_entry.insert(0, time_module.strftime("%H:%M"))  # Set default time to current system time
     calendar_entry.entry.delete(0, ttk.END)  # Clear the calendar widget after adding
     calendar_entry.entry.insert(0, time_module.strftime("%Y-%m-%d"))  # Set default date to current system date
@@ -335,6 +342,7 @@ def show_about():
     about_window.bind("<Button-1>", lambda e: about_window.destroy())
     about_window.bind("<Destroy>", lambda e: about_window.destroy())
 
+
 def open_settings():
     # Create a new window
     settings_window = Toplevel(root)
@@ -378,34 +386,46 @@ def open_settings():
     Button(settings_window, text="Save", command=save_changes).grid(row=row, column=0, columnspan=2, pady=10)
 
 
-
-
-
 # Creating the GUI
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
-root.title(config['app']['title'] + ' | ' + config['app']['version'])  # Set the title of the window to "Reminder System"
+root.title(
+    config['app']['title'] + ' | ' + config['app']['version'])  # Set the title of the window to "Reminder System"
 root.geometry("750x300")  # Set the size of the window to 700x300 pixels
 root.resizable(False, False)  # Disable resizing of the window
 
-
-
+# Creating a top-level menu for the application window
 top_menu = Menu(root)
+
+# Configuring the created menu to be the menu of the root window
 root.config(menu=top_menu)
 
-
+# Creating a submenu for the 'Application' menu item
 root.file_menu = Menu(top_menu)
+
+# Adding the 'Application' submenu to the top-level menu
 top_menu.add_cascade(label='Application', menu=root.file_menu)
+
+# Adding a 'Settings' command to the 'Application' submenu, which calls the 'open_settings' function when clicked
 root.file_menu.add_command(label='Settings', command=open_settings)
+
+# Adding a separator to the 'Application' submenu
 root.file_menu.add_separator()
+
+# Adding an 'Exit' command to the 'Application' submenu, which quits the application when clicked
 root.file_menu.add_command(label='Exit', command=root.quit)
 
+# Creating a submenu for the 'Help' menu item
 root.help_menu = Menu(top_menu)
+
+# Adding the 'Help' submenu to the top-level menu
 top_menu.add_cascade(label='Help', menu=root.help_menu)
+
+# Adding an 'About' command to the 'Help' submenu, which calls the 'show_about' function when clicked
 root.help_menu.add_command(label='About', command=show_about)
-root.help_menu.add_command(label='Check for updates', command=lambda: UpdateManager.check_for_updates(config['app'], progressbar, root))
 
-
-
+# Adding a 'Check for updates' command to the 'Help' submenu, which checks for updates when clicked
+root.help_menu.add_command(label='Check for updates',
+                           command=lambda: UpdateManager.check_for_updates(config['app'], progressbar, root))
 
 # check if icon file is present in the directory
 # if not, set the default icon

@@ -8,7 +8,7 @@ from UpdateManager import *
 # messagebox: used for displaying messages to the user,
 # Listbox: used for creating a listbox widget,
 # Toplevel: used for creating new windows
-from tkinter import messagebox, Listbox, Toplevel, Menu
+from tkinter import messagebox, Listbox, Toplevel, Menu, Label, Entry, Button
 
 import time as time_module  # Used for handling time-related tasks
 from threading import Thread  # Used for creating and managing new threads
@@ -312,6 +312,75 @@ def update_datetime():
     root.after(1000, update_datetime)  # Update every second
 
 
+def show_about():
+    """
+    This function shows an "About" window with information about the application.
+
+    It creates a new Toplevel window and configures it to be on top of all other windows.
+    It creates a Label widget with the application name, version, and description and adds it to the window.
+    The text of the label is displayed in black on a white background and is centered in the window.
+    The function binds the left mouse button click event and the window destroy event to the 'close_about' function.
+    This means that when the user clicks on the window or closes it, the window will be closed.
+
+    Returns:
+        None
+    """
+    about_window = Toplevel(root)
+    about_window.geometry("300x200")
+    about_window.title("About")
+    about_window.attributes("-topmost", True)
+    about_label = ttk.Label(about_window, text=f"{config['app']['title']} {config['app']['version']}",
+                            font=("Helvetica", 12), background="white", foreground="black", anchor="center")
+    about_label.pack(expand=True, fill="both")
+    about_window.bind("<Button-1>", lambda e: about_window.destroy())
+    about_window.bind("<Destroy>", lambda e: about_window.destroy())
+
+def open_settings():
+    # Create a new window
+    settings_window = Toplevel(root)
+    settings_window.title('Settings')
+
+    # Create an Entry widget for each field in the config dictionary
+    entries = {}
+    row = 0  # Initialize row counter
+    for section, section_config in config.items():
+        for key, value in section_config.items():
+            Label(settings_window, text=f"{section}.{key}").grid(row=row, column=0)
+            entry = Entry(settings_window)
+            entry.insert(0, value)
+            entry.grid(row=row, column=1, padx=10, pady=5)
+
+            # Disable the 'version' field
+            if key == 'version':
+                entry.config(state='disabled')
+
+            entries[f"{section}.{key}"] = entry
+            row += 1  # Increment row counter for each key in the section
+
+    # Function to save changes
+    def save_changes():
+        # Update the config dictionary with the current values from the Entry widgets
+        for key, entry in entries.items():
+            section, field = key.split('.')
+            config[section][field] = entry.get()
+
+        # Write the updated config dictionary back to the config.json file
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=4)
+
+            # if settings are saved, show a message
+            messagebox.showinfo("Settings",
+                                "Settings have been saved successfully. Please reload the application for changes to take effect.")
+
+        settings_window.destroy()
+
+    # Add a "Save" button
+    Button(settings_window, text="Save", command=save_changes).grid(row=row, column=0, columnspan=2, pady=10)
+
+
+
+
+
 # Creating the GUI
 root = ttk.Window(themename="journal")  # Create a new window with the "journal" theme
 root.title(config['app']['title'])  # Set the title of the window to "Reminder System"
@@ -326,14 +395,13 @@ root.config(menu=top_menu)
 
 root.file_menu = Menu(top_menu)
 top_menu.add_cascade(label='Application', menu=root.file_menu)
-root.file_menu.add_command(label='Settings')
-root.file_menu.add_command(label='Change Theme')
+root.file_menu.add_command(label='Settings', command=open_settings)
 root.file_menu.add_separator()
 root.file_menu.add_command(label='Exit', command=root.quit)
 
 root.help_menu = Menu(top_menu)
 top_menu.add_cascade(label='Help', menu=root.help_menu)
-root.help_menu.add_command(label='About')
+root.help_menu.add_command(label='About', command=show_about)
 root.help_menu.add_command(label='Check for updates', command=lambda: UpdateManager.check_for_updates(config['app'], progressbar, root))
 
 

@@ -35,7 +35,7 @@ def check_for_updates(config, progressbar, root):
     print("Checking for updates...")
 
     # Compare the latest version with your app's current version
-    if latest_version > current_version:
+    if latest_version != current_version:
         print("Update available!")
 
         # Get the download URL of the latest release
@@ -128,7 +128,7 @@ def update_version_in_config(latest_version):
         config_data = json.load(config_file)
 
     # Update the version number in the configuration data
-    config_data['version'] = latest_version
+    config_data['app']['version'] = latest_version
 
     # Open the configuration file in write mode
     with open('config.json', 'w') as config_file:

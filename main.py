@@ -153,17 +153,17 @@ def play_reminder(reminder_text, reminder_id, frequency):
         # Fetch the original time of the reminder from the database
         fetch_reminder = db_manager.get_reminder_by_id(reminder_id)
         original_time = fetch_reminder[3]
-
+        print(original_time)
         # Convert the original time to a datetime object
         original_datetime = datetime.fromtimestamp(original_time)
 
         # Add 24 hours to the original datetime
         new_datetime = original_datetime + timedelta(hours=24)
-
         # Convert the new datetime back to a Unix timestamp
         new_time = int(new_datetime.timestamp())
 
         db_manager.update_reminder_time(reminder_id, new_time)
+
         update_reminder_list()  # Update the reminder list after playing the reminder
 
     while active_reminder:
@@ -243,8 +243,9 @@ def monitor_reminders():
                 if next_reminder[2] == 'one-time':
                     db_manager.remove_reminder_from_db(next_reminder[0])
                 elif next_reminder[2] == '24hr':
-                    new_time = int(datetime.now().timestamp()) + 24 * 3600
+                    new_time = int(next_reminder[3]) + 24 * 3600
                     db_manager.update_reminder_time(next_reminder[0], new_time)
+
         time_module.sleep(1)  # Check every second
 
 

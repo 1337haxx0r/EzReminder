@@ -210,6 +210,7 @@ def update_reminder_list():
     for reminder in reminders:
         reminder_time_str = time_module.strftime('%H:%M', time_module.localtime(reminder[3]))
         reminder_list.insert(ttk.END, f"{reminder[1]} at {reminder_time_str} ({reminder[2]})")
+        # listen for double click
     reminder_list_updated = True
 
 
@@ -318,6 +319,77 @@ def update_datetime():
         current_date = new_date
 
     root.after(1000, update_datetime)  # Update every second
+
+
+# edit reminder from the list by double-clicking which then opens a new window with the reminder details
+def edit_reminder(event):
+    selected_index = reminder_list.curselection()[0]
+    reminders = db_manager.fetch_reminders(start_of_day, end_of_day)
+    selected_id = reminders[selected_index][0]
+    reminder_details = db_manager.get_reminder_by_id(selected_id)
+    edit_window = Toplevel(root)
+    edit_window.geometry("340x200")
+    edit_window.title("Edit Reminder")
+    edit_window.resizable(False, False)
+
+    reminder_text_entry = ttk.Entry(edit_window, width=50)
+    reminder_text_entry.grid(row=0, column=0, padx=10, pady=5)
+    reminder_text_entry.insert(0, reminder_details[1])
+
+    reminder_time_entry = ttk.Entry(edit_window)
+    reminder_time_entry.grid(row=1, column=0, padx=10, pady=5)
+    # format HH:MM
+    reminder_time_entry.insert(0, time_module.strftime('%H:%M', time_module.localtime(reminder_details[3])))
+
+    #date entry
+    # Convert the reminder_date string to a datetime object
+    reminder_date = datetime.strptime(time_module.strftime('%Y-%m-%d', time_module.localtime(reminder_details[3])),
+                                      '%Y-%m-%d')
+    reminder_calendar_entry = ttk.DateEntry(edit_window, style='success.TCalendar', width=15, startdate=reminder_date)
+    reminder_calendar_entry.grid(row=2, column=0, padx=5)
+
+
+    reminder_frequency_entry = ttk.StringVar(value=reminder_details[2])
+    reminder_frequency_menu = ttk.Combobox(edit_window, textvariable=reminder_frequency_entry, values=['one-time', '24hr'],
+                                  width=8)  # Create a dropdown menu for the frequency of the reminder
+    reminder_frequency_menu.grid(row=3, column=0, padx=10, pady=5)  # Add the dropdown menu to the window
+
+    def save_changes():
+        # Get the updated details from the Entry widgets
+        updated_text = reminder_text_entry.get()
+        updated_time = reminder_time_entry.get()
+        updated_frequency = reminder_frequency_entry.get()
+
+        try:
+            reminder_hour, reminder_minute = map(int, updated_time.split(':'))
+        except ValueError:
+            messagebox.showerror("Invalid Time Format", "Please enter the time in HH:MM format.")
+            return
+
+        # Fetch the date from the calendar widget
+        reminder_date_str = reminder_calendar_entry.entry.get()
+
+        # Parse the date string into a datetime.date object
+        reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
+
+        # Combine the date and time into a datetime object
+        reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
+
+        reminder_timestamp = int(reminder_datetime.timestamp())
+
+
+        # Update the reminder in the database
+        db_manager.update_reminder(selected_id, updated_text, reminder_timestamp, updated_frequency)
+
+        # Update the reminder list in the GUI
+        update_reminder_list()
+
+        # Close the edit window
+        edit_window.destroy()
+
+    # Add a 'Save' button to the window
+    save_button = ttk.Button(edit_window, text="Save", command=save_changes)
+    save_button.grid(row=4, column=0, padx=10, pady=5)  # Use grid instead of pack
 
 
 def show_about():
@@ -462,6 +534,7 @@ set_button.grid(row=2, column=6, padx=10)  # Add the button to the window
 
 reminder_list = Listbox(root, width=120)  # Create a listbox to display the list of reminders
 reminder_list.grid(row=3, column=1, columnspan=7, pady=10, padx=10)  # Add the listbox to the window
+reminder_list.bind("<Double-1>", edit_reminder)
 
 update_reminder_list()  # Update the list of reminders
 

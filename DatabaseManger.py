@@ -126,3 +126,9 @@ class DataBaseManager:
         """
         self.cursor.execute("UPDATE reminders SET time = %s WHERE id = %s", (new_time, reminder_id))
         self.db.commit()
+
+    def update_reminder(self, selected_id, updated_text, updated_time, updated_frequency):
+
+        self.cursor.execute("UPDATE reminders SET text = %s, time = %s, frequency = %s WHERE id = %s",
+                            (updated_text, updated_time, updated_frequency, selected_id))
+        self.db.commit()

@@ -1,0 +1,14 @@
+{
+    "database": {
+        "host": "host",
+        "user": "user",
+        "password": "password",
+        "database": "database",
+        "charset": "utf8"
+    },
+    "app": {
+        "title": "Reminder System",
+        "icon": "icon.ico",
+		"version": "v0.9.11-beta"
+    }
+}

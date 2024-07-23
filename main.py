@@ -478,7 +478,7 @@ root = ttk.Window(themename="journal")  # Create a new window with the "journal"
 print(root)
 root.title(
     config['app']['title'] + ' | ' + config['app']['version'])  # Set the title of the window to "Reminder System"
-root.geometry("1000x300")  # Set the size of the window to 700x300 pixels
+root.geometry("1100x300")  # Set the size of the window to 1100x300 pixels (for mac)
 root.resizable(False, False)  # Disable resizing of the window
 
 

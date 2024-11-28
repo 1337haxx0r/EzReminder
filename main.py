@@ -339,7 +339,7 @@ def edit_reminder(event):
     selected_id = reminders[selected_index][0]
     reminder_details = db_manager.get_reminder_by_id(selected_id)
     edit_window = Toplevel(root)
-    edit_window.geometry("340x200")
+    edit_window.geometry("450x250")
     edit_window.title("Edit Reminder")
     edit_window.resizable(False, False)
 
@@ -380,8 +380,12 @@ def edit_reminder(event):
         # Fetch the date from the calendar widget
         reminder_date_str = reminder_calendar_entry.entry.get()
 
-        # Parse the date string into a datetime.date object
-        reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
+
+        try:
+            reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            # If the format is not %Y-%m-%d, try converting from %m/%d/%y
+            reminder_date = datetime.strptime(reminder_date_str, "%m/%d/%y").date()
 
         # Combine the date and time into a datetime object
         reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
@@ -397,9 +401,24 @@ def edit_reminder(event):
         # Close the edit window
         edit_window.destroy()
 
+    def delete_reminder():
+        selected_index = reminder_list.curselection()[0]
+        reminders = db_manager.fetch_reminders(start_of_day, end_of_day)
+        selected_id = reminders[selected_index][0]
+        db_manager.remove_reminder_from_db(selected_id)
+        update_reminder_list()
+        edit_window.destroy()
+
     # Add a 'Save' button to the window
-    save_button = ttk.Button(edit_window, text="Save", command=save_changes)
+    save_button = ttk.Button(edit_window, text="Save", command=save_changes, style='success.TButton')
     save_button.grid(row=4, column=0, padx=10, pady=5)  # Use grid instead of pack
+
+    # delete button
+    delete_button = ttk.Button(edit_window, text="!!! Delete !!!", command=delete_reminder, style='error.TButton')
+    delete_button.grid(row=5, column=0, padx=10, pady=5)  # Use grid instead of pack
+
+
+
 
 
 def show_about():

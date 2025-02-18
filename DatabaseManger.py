@@ -42,7 +42,9 @@ class DataBaseManager:
             user=config['user'],
             password=config['password'],
             database=config['database'],
-            charset=config['charset']
+            charset=config['charset'],
+            # @todo - different database throws an error
+            #collation='utf8mb4_general_ci'
         )
         self.cursor = self.db.cursor()
 
@@ -132,3 +134,8 @@ class DataBaseManager:
         self.cursor.execute("UPDATE reminders SET text = %s, time = %s, frequency = %s WHERE id = %s",
                             (updated_text, updated_time, updated_frequency, selected_id))
         self.db.commit()
+
+
+    def get_all_reminders(self):
+        self.cursor.execute("SELECT * FROM reminders")
+        return self.cursor.fetchall()

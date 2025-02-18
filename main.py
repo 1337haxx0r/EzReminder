@@ -207,6 +207,7 @@ def update_reminder_list():
     global reminder_list_updated
     reminder_list.delete(0, ttk.END)
     reminders = db_manager.fetch_reminders(start_of_day, end_of_day)
+    print(reminders)
     for reminder in reminders:
         reminder_time_str = time_module.strftime('%H:%M', time_module.localtime(reminder[3]))
         reminder_list.insert(ttk.END, f"{reminder[1]} at {reminder_time_str} ({reminder[2]})")
@@ -416,6 +417,128 @@ def show_about():
     about_window.bind("<Destroy>", lambda e: about_window.destroy())
 
 
+def show_debug():
+    debug_window = Toplevel(root)
+    debug_window.geometry("800x600")
+    debug_window.title("Debug Window with Tabs and Listboxes")
+    debug_window.attributes("-topmost", True)
+
+    notebook = ttk.Notebook(debug_window)
+    notebook.pack(expand=True, fill="both")
+
+    all_frame = ttk.Frame(notebook)
+    expired_frame = ttk.Frame(notebook)
+    notebook.add(all_frame, text="All")
+    notebook.add(expired_frame, text="Expired")
+
+    all_listbox = Listbox(all_frame, width=100)
+    all_listbox.pack(padx=10, pady=10, fill="both", expand=True)
+    expired_listbox = Listbox(expired_frame, width=100)
+    expired_listbox.pack(padx=10, pady=10, fill="both", expand=True)
+
+    all_reminder_records = []
+    expired_reminder_records = []
+
+    def update_debug():
+        # Clear the listboxes and records
+        all_listbox.delete(0, 'end')
+        expired_listbox.delete(0, 'end')
+        del all_reminder_records[:]
+        del expired_reminder_records[:]
+
+        # Fetch reminders and repopulate
+        reminders = db_manager.get_all_reminders()
+        current_time = int(time_module.time())
+        for reminder in reminders:
+            reminder_time_str = time_module.strftime('%Y-%m-%d %H:%M:%S', time_module.localtime(reminder[3]))
+            display_text = f"{reminder[1]} | {reminder[2]} | {reminder_time_str}"
+            all_listbox.insert("end", display_text)
+            all_reminder_records.append(reminder)
+            if reminder[3] < current_time:
+                expired_listbox.insert("end", display_text)
+                expired_reminder_records.append(reminder)
+
+    update_debug()  # initial population
+
+    def on_edit_all(event):
+        selection = all_listbox.curselection()
+        if selection:
+            index = selection[0]
+            selected_reminder = all_reminder_records[index]
+            # Pass update_debug as a callback so that the debug window refreshes after editing.
+            edit_reminder_debug(selected_reminder, refresh_callback=update_debug)
+
+    def on_edit_expired(event):
+        selection = expired_listbox.curselection()
+        if selection:
+            index = selection[0]
+            selected_reminder = expired_reminder_records[index]
+            edit_reminder_debug(selected_reminder, refresh_callback=update_debug)
+
+    all_listbox.bind("<Double-Button-1>", on_edit_all)
+    expired_listbox.bind("<Double-Button-1>", on_edit_expired)
+
+
+def edit_reminder_debug(reminder, refresh_callback=None):
+    selected_id = reminder[0]
+    reminder_details = db_manager.get_reminder_by_id(selected_id)
+    edit_window = Toplevel(root)
+    edit_window.geometry("340x300")
+    edit_window.title("Edit Reminder")
+    edit_window.resizable(False, False)
+    edit_window.attributes("-topmost", True)
+    edit_window.grab_set()  # Optionally make it modal
+
+    reminder_text_entry = ttk.Entry(edit_window, width=50)
+    reminder_text_entry.grid(row=0, column=0, padx=10, pady=5)
+    reminder_text_entry.insert(0, reminder_details[1])
+
+    reminder_time_entry = ttk.Entry(edit_window)
+    reminder_time_entry.grid(row=1, column=0, padx=10, pady=5)
+    reminder_time_entry.insert(0, time_module.strftime('%H:%M', time_module.localtime(reminder_details[3])))
+
+    reminder_date = datetime.strptime(time_module.strftime('%Y-%m-%d', time_module.localtime(reminder_details[3])),
+                                      '%Y-%m-%d')
+    reminder_calendar_entry = ttk.DateEntry(edit_window, style='success.TCalendar', width=15, startdate=reminder_date)
+    reminder_calendar_entry.grid(row=2, column=0, padx=5)
+
+    reminder_frequency_entry = ttk.StringVar(value=reminder_details[2])
+    reminder_frequency_menu = ttk.Combobox(edit_window, textvariable=reminder_frequency_entry,
+                                           values=['one-time', '24hr'], width=8)
+    reminder_frequency_menu.grid(row=3, column=0, padx=10, pady=5)
+
+    def save_changes():
+        updated_text = reminder_text_entry.get()
+        updated_time = reminder_time_entry.get()
+        updated_frequency = reminder_frequency_entry.get()
+
+        try:
+            reminder_hour, reminder_minute = map(int, updated_time.split(':'))
+        except ValueError:
+            messagebox.showerror("Invalid Time Format", "Please enter the time in HH:MM format.")
+            return
+
+        reminder_date_str = reminder_calendar_entry.entry.get()
+        reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
+        reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
+        reminder_timestamp = int(reminder_datetime.timestamp())
+
+        db_manager.update_reminder(selected_id, updated_text, reminder_timestamp, updated_frequency)
+        update_reminder_list()  # Optionally update your main list as well
+
+        # Call the refresh callback to update the debug window if provided
+        if refresh_callback:
+            refresh_callback()
+
+        edit_window.destroy()
+
+    save_button = ttk.Button(edit_window, text="Save", command=save_changes)
+    save_button.grid(row=4, column=0, padx=10, pady=5)
+    delete_button = ttk.Button(edit_window, text="Delete",
+                               command=lambda: delete_reminder_debug(selected_id, refresh_callback))
+    delete_button.grid(row=5, column=0, padx=10, pady=5)
+
+
 def open_settings():
     # Create a new window
     settings_window = Toplevel(root)
@@ -499,6 +622,10 @@ root.help_menu.add_command(label='About', command=show_about)
 # Adding a 'Check for updates' command to the 'Help' submenu, which checks for updates when clicked
 root.help_menu.add_command(label='Check for updates',
                            command=lambda: UpdateManager.check_for_updates(config['app'], progressbar, root))
+
+root.help_menu.add_separator()
+
+root.help_menu.add_command(label='debug', command=show_debug)
 
 # check if icon file is present in the directory
 # if not, set the default icon

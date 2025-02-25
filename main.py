@@ -455,8 +455,14 @@ def show_debug():
             all_listbox.insert("end", display_text)
             all_reminder_records.append(reminder)
             if reminder[3] < current_time:
-                expired_listbox.insert("end", display_text)
                 expired_reminder_records.append(reminder)
+
+        # Sort expired reminders by timestamp in descending order
+        expired_reminder_records.sort(key=lambda x: x[3], reverse=True)
+        for reminder in expired_reminder_records:
+            reminder_time_str = time_module.strftime('%Y-%m-%d %H:%M:%S', time_module.localtime(reminder[3]))
+            display_text = f"{reminder[1]} | {reminder[2]} | {reminder_time_str}"
+            expired_listbox.insert("end", display_text)
 
     update_debug()  # initial population
 
@@ -480,22 +486,22 @@ def show_debug():
 
 
 def edit_reminder_debug(reminder, refresh_callback=None):
-    selected_id = reminder[0]
-    reminder_details = db_manager.get_reminder_by_id(selected_id)
-    edit_window = Toplevel(root)
-    edit_window.geometry("340x300")
-    edit_window.title("Edit Reminder")
-    edit_window.resizable(False, False)
-    edit_window.attributes("-topmost", True)
-    edit_window.grab_set()  # Optionally make it modal
+            selected_id = reminder[0]
+            reminder_details = db_manager.get_reminder_by_id(selected_id)
+            edit_window = Toplevel(root)
+            edit_window.geometry("340x300")
+            edit_window.title("Edit Reminder")
+            edit_window.resizable(False, False)
+            edit_window.attributes("-topmost", True)
+            edit_window.grab_set()  # Optionally make it modal
 
-    reminder_text_entry = ttk.Entry(edit_window, width=50)
-    reminder_text_entry.grid(row=0, column=0, padx=10, pady=5)
-    reminder_text_entry.insert(0, reminder_details[1])
+            reminder_text_entry = ttk.Entry(edit_window, width=50)
+            reminder_text_entry.grid(row=0, column=0, columnspan=2, padx=10, pady=5)
+            reminder_text_entry.insert(0, reminder_details[1])
 
-    reminder_time_entry = ttk.Entry(edit_window)
-    reminder_time_entry.grid(row=1, column=0, padx=10, pady=5)
-    reminder_time_entry.insert(0, time_module.strftime('%H:%M', time_module.localtime(reminder_details[3])))
+            reminder_time_entry = ttk.Entry(edit_window)
+            reminder_time_entry.grid(row=1, column=0, columnspan=2, padx=10, pady=5)
+            reminder_time_entry.insert(0, time_module.strftime('%H:%M', time_module.localtime(reminder_details[3])))
 
             reminder_date = datetime.strptime(time_module.strftime('%Y-%m-%d', time_module.localtime(reminder_details[3])),
                                               '%Y-%m-%d')
@@ -510,41 +516,41 @@ def edit_reminder_debug(reminder, refresh_callback=None):
             today_button = ttk.Button(edit_window, text="Today", command=set_today)
             today_button.grid(row=2, column=1, padx=(0, 50), pady=5)
 
-    reminder_frequency_entry = ttk.StringVar(value=reminder_details[2])
-    reminder_frequency_menu = ttk.Combobox(edit_window, textvariable=reminder_frequency_entry,
-                                           values=['one-time', '24hr'], width=8)
-    reminder_frequency_menu.grid(row=3, column=0, padx=10, pady=5)
+            reminder_frequency_entry = ttk.StringVar(value=reminder_details[2])
+            reminder_frequency_menu = ttk.Combobox(edit_window, textvariable=reminder_frequency_entry,
+                                                   values=['one-time', '24hr'], width=8)
+            reminder_frequency_menu.grid(row=3, column=0, columnspan=2, padx=10, pady=5)
 
-    def save_changes():
-        updated_text = reminder_text_entry.get()
-        updated_time = reminder_time_entry.get()
-        updated_frequency = reminder_frequency_entry.get()
+            def save_changes():
+                updated_text = reminder_text_entry.get()
+                updated_time = reminder_time_entry.get()
+                updated_frequency = reminder_frequency_entry.get()
 
-        try:
-            reminder_hour, reminder_minute = map(int, updated_time.split(':'))
-        except ValueError:
-            messagebox.showerror("Invalid Time Format", "Please enter the time in HH:MM format.")
-            return
+                try:
+                    reminder_hour, reminder_minute = map(int, updated_time.split(':'))
+                except ValueError:
+                    messagebox.showerror("Invalid Time Format", "Please enter the time in HH:MM format.")
+                    return
 
-        reminder_date_str = reminder_calendar_entry.entry.get()
-        reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
-        reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
-        reminder_timestamp = int(reminder_datetime.timestamp())
+                reminder_date_str = reminder_calendar_entry.entry.get()
+                reminder_date = datetime.strptime(reminder_date_str, "%Y-%m-%d").date()
+                reminder_datetime = datetime.combine(reminder_date, time(hour=reminder_hour, minute=reminder_minute))
+                reminder_timestamp = int(reminder_datetime.timestamp())
 
-        db_manager.update_reminder(selected_id, updated_text, reminder_timestamp, updated_frequency)
-        update_reminder_list()  # Optionally update your main list as well
+                db_manager.update_reminder(selected_id, updated_text, reminder_timestamp, updated_frequency)
+                update_reminder_list()  # Optionally update your main list as well
 
-        # Call the refresh callback to update the debug window if provided
-        if refresh_callback:
-            refresh_callback()
+                # Call the refresh callback to update the debug window if provided
+                if refresh_callback:
+                    refresh_callback()
 
-        edit_window.destroy()
+                edit_window.destroy()
 
-    save_button = ttk.Button(edit_window, text="Save", command=save_changes)
-    save_button.grid(row=4, column=0, padx=10, pady=5)
-    delete_button = ttk.Button(edit_window, text="Delete",
-                               command=lambda: delete_reminder_debug(selected_id, refresh_callback))
-    delete_button.grid(row=5, column=0, padx=10, pady=5)
+            save_button = ttk.Button(edit_window, text="Save", command=save_changes)
+            save_button.grid(row=4, column=0, columnspan=2, padx=10, pady=5)
+            delete_button = ttk.Button(edit_window, text="Delete",
+                                       command=lambda: delete_reminder_debug(selected_id, refresh_callback))
+            delete_button.grid(row=5, column=0, columnspan=2, padx=10, pady=5)
 
 
 def open_settings():

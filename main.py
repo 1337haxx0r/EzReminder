@@ -497,10 +497,18 @@ def edit_reminder_debug(reminder, refresh_callback=None):
     reminder_time_entry.grid(row=1, column=0, padx=10, pady=5)
     reminder_time_entry.insert(0, time_module.strftime('%H:%M', time_module.localtime(reminder_details[3])))
 
-    reminder_date = datetime.strptime(time_module.strftime('%Y-%m-%d', time_module.localtime(reminder_details[3])),
-                                      '%Y-%m-%d')
-    reminder_calendar_entry = ttk.DateEntry(edit_window, style='success.TCalendar', width=15, startdate=reminder_date)
-    reminder_calendar_entry.grid(row=2, column=0, padx=5)
+            reminder_date = datetime.strptime(time_module.strftime('%Y-%m-%d', time_module.localtime(reminder_details[3])),
+                                              '%Y-%m-%d')
+            reminder_calendar_entry = ttk.DateEntry(edit_window, style='success.TCalendar', width=15, startdate=reminder_date)
+            reminder_calendar_entry.grid(row=2, column=0, padx=(70, 0), pady=5)
+
+            def set_today():
+                today_date = datetime.today().strftime('%Y-%m-%d')
+                reminder_calendar_entry.entry.delete(0, 'end')
+                reminder_calendar_entry.entry.insert(0, today_date)
+
+            today_button = ttk.Button(edit_window, text="Today", command=set_today)
+            today_button.grid(row=2, column=1, padx=(0, 50), pady=5)
 
     reminder_frequency_entry = ttk.StringVar(value=reminder_details[2])
     reminder_frequency_menu = ttk.Combobox(edit_window, textvariable=reminder_frequency_entry,

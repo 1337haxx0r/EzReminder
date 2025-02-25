@@ -9,6 +9,6 @@
     "app": {
         "title": "Reminder System",
         "icon": "icon.ico",
-		"version": "v0.9.11-beta"
+		"version": "v0.9.13-beta"
     }
 }

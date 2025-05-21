@@ -1,14 +1,17 @@
 import pymysql
-from config.config import db_config
+from config.user_config import load_user_config
 
 
 class DatabaseManager:
     def __init__(self):
+        user_config = load_user_config()
+        app_config = user_config['db']
+
         self.db = pymysql.connect(
-            host=db_config["host"],
-            user=db_config["user"],
-            password=db_config["password"],
-            database=db_config["database"],
+            host=app_config["host"],
+            user=app_config["user"],
+            password=app_config["password"],
+            database=app_config["database"],
             charset="utf8mb4"
         )
         self.cursor = self.db.cursor()

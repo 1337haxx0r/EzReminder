@@ -23,7 +23,7 @@ def launch_gui():
     db = DatabaseManager()
 
     #date_format = "%Y-%m-%d"
-    date_format = "%m/%d/%y"
+    date_format = "%m/%d/%Y"
 
 
     def show_alert(text):
@@ -51,15 +51,17 @@ def launch_gui():
         active_reminder = True
 
         tts = gTTS(text, lang='en')
-        mp3_fp = io.BytesIO()
-        tts.write_to_fp(mp3_fp)
-        mp3_fp.seek(0)
+
+        mp3_fp1 = io.BytesIO()
+        mp3_fp2 = io.BytesIO()
+        tts.write_to_fp(mp3_fp1)
+        tts.write_to_fp(mp3_fp2)
+        mp3_fp1.seek(0)
+        mp3_fp2.seek(0)
 
         pygame.mixer.init()
-        pygame.mixer.music.load(mp3_fp, 'mp3')
-        pygame.mixer.music.play()
-
-        show_alert(text)
+        sound = pygame.mixer.Sound(mp3_fp2)
+        length = round(sound.get_length())
 
         # Handle frequency
         if frequency == 'one-time':
@@ -77,6 +79,17 @@ def launch_gui():
 
         update_reminder_list()
 
+        show_alert(text)
+        mp3_bytes = mp3_fp1.getvalue()  # Get raw bytes once
+
+        while active_reminder:
+            buffer = io.BytesIO(mp3_bytes)  # Fresh buffer each loop
+            pygame.mixer.music.load(buffer, 'mp3')
+            pygame.mixer.music.play()
+            time_module.sleep(length + 2)
+
+
+
 
 
     def mute_reminder():
@@ -85,15 +98,18 @@ def launch_gui():
         pygame.mixer.music.stop()
         hide_alert()
 
-
-
     def update_reminder_list():
         reminder_list.delete(0, 'end')
-        reminders = db.get_all_reminders()
-        for r in reminders:
-            readable_time = datetime.fromtimestamp(r[3]).strftime(date_format + " %H:%M")
-            reminder_list.insert('end', f"{r[1]} ({r[2]}) at {readable_time}")
 
+        today = datetime.today()
+        start_of_day = int(datetime(today.year, today.month, today.day, 0, 0, 1).timestamp())
+        end_of_day = int(datetime(today.year, today.month, today.day, 23, 59, 59).timestamp())
+
+        reminders = [r for r in db.get_all_reminders() if start_of_day <= r[3] <= end_of_day]
+
+        for r in reminders:
+            readable_time = datetime.fromtimestamp(r[3]).strftime(f"{date_format} %H:%M")
+            reminder_list.insert('end', f"{r[1]} ({r[2]}) at {readable_time}")
 
     def set_reminder():
         text = reminder_entry.get()
@@ -109,14 +125,8 @@ def launch_gui():
         # todo: make once reusable function
         try:
             hour, minute = map(int, t_str.split(":"))
-            try:
-                reminder_date = datetime.strptime(date_str, "%m/%d/%y").date()
-            except ValueError:
-                try:
-                    reminder_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-                except ValueError:
-                    messagebox.showerror("Date Error", f"Unrecognized date format: {date_str}")
-                    return
+            reminder_date = datetime.strptime(date_str, date_format).date()
+
 
             reminder_datetime = datetime.combine(reminder_date, dt_time(hour=hour, minute=minute))
             timestamp = int(reminder_datetime.timestamp())
@@ -135,8 +145,8 @@ def launch_gui():
         calendar_entry.entry.insert(0, reminder_date.strftime(date_format))
         frequency_var.set('one-time')
 
-        #messagebox.showinfo("Reminder Set", "Your reminder has been added.")
-
+        status_label.config(text=f"Reminder was added for {reminder_date.strftime(date_format)} at {t_str}", foreground="green")
+        root.after(5000, lambda: status_label.config(text=""))
 
     def open_edit_window():
         selection = reminder_list.curselection()
@@ -168,7 +178,7 @@ def launch_gui():
         time_entry_popup.insert(0, reminder_time_str)
         time_entry_popup.pack(pady=5)
 
-        calendar_popup = DateEntry(win, width=12)
+        calendar_popup = DateEntry(win, dateformat=date_format, width=12)
         calendar_popup.entry.delete(0, 'end')
         calendar_popup.entry.insert(0, reminder_date_str)
         calendar_popup.pack(pady=5)
@@ -256,7 +266,7 @@ def launch_gui():
     time_entry.grid(row=2, column=4, padx=5)
     time_entry.insert(0, time_module.strftime("%H:%M"))
 
-    calendar_entry = DateEntry(root, style='success.TCalendar', width=10)
+    calendar_entry = DateEntry(root, dateformat=date_format, style='success.TCalendar', width=10)
     calendar_entry.grid(row=2, column=3, padx=5)
 
     frequency_var = StringVar(value='one-time')
@@ -270,9 +280,12 @@ def launch_gui():
     reminder_list.bind("<Double-1>", lambda event: open_edit_window())
     reminder_list.grid(row=3, column=1, columnspan=7, pady=10, padx=10)
 
+    status_label = Label(root, text="", font=("Helvetica", 10), anchor="center")
+    status_label.grid(row=6, column=0, columnspan=7, pady=(0, 10))
+
     progressbar = Progressbar(root, length=200)
     progressbar.grid(row=5, column=0, columnspan=7, pady=10)
-
+    progressbar.grid_remove()  # hides it until needed
 
     # ----------------------------
     # Dynamic Time Label

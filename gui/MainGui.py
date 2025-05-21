@@ -295,7 +295,11 @@ def launch_gui():
 
     # Set the window size based on the DPI
     dpi = root.winfo_fpixels('1i')
-    scale = dpi / 96  # baseline DPI
+    # macOS DPI correction
+    if platform.system() == "Darwin" and dpi <= 73:
+        scale = 1.5  # or test with 2.5 for higher-DPI screens
+    else:
+        scale = max(dpi / 96, 1.0)
 
     base_width, base_height = 750, 300
     scaled_width = int(base_width * scale)

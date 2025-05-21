@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from config.version import __version__
 
 load_dotenv()
 
@@ -14,6 +15,6 @@ db_config = {
 # App config
 app_config = {
     "title": os.getenv("APP_TITLE", "EzReminder"),
-    "version": os.getenv("APP_VERSION", "1.0"),
+    "version": __version__,
     "icon": os.getenv("APP_ICON", "icon.ico"),
 }

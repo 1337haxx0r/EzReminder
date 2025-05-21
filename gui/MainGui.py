@@ -393,15 +393,32 @@ def launch_gui():
         root.after(100, open_settings)
 
     def monitor_reminders():
+        global db_connected
         while True:
-            if db and not active_reminder:  # ✅ only run if DB is connected
-                now = int(time_module.time())
-                reminders = db.get_all_reminders()
-                for r in reminders:
-                    if r[3] <= now:
-                        play_reminder(r[1], r[0], r[2])
-                        break
-            time_module.sleep(5)
+            if db and not active_reminder:
+                try:
+                    now = int(time_module.time())
+                    reminders = db.get_all_reminders()
+                    for r in reminders:
+                        if r[3] <= now:
+                            play_reminder(r[1], r[0], r[2])
+                            break
+                except Exception as e:
+                    print(f"❌ Lost connection to database during reminder check: {e}")
+                    db_connected = False
+
+                    # Show reconnect banner
+                    root.after(0, lambda: connection_banner.config(
+                        text="⚠️ Lost connection to the database. Please check your settings.",
+                        background="red"
+                    ))
+
+                    # Optionally stop the reminder thread
+                    time_module.sleep(1)
+                    continue
+
+            time_module.sleep(1)
+
 
     monitor_thread = Thread(target=monitor_reminders, daemon=True)
     monitor_thread.start()

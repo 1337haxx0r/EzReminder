@@ -7,6 +7,7 @@ import time as time_module
 from database.DatabaseManager import DatabaseManager
 from config.user_config import save_user_config, load_user_config
 from logic.UpdateManager import check_for_updates
+import platform
 
 import json
 import os
@@ -16,6 +17,11 @@ from gtts import gTTS
 import pygame
 
 def launch_gui():
+
+    # Check if the script is running MAC
+    IS_MAC = platform.system() == "Darwin"
+
+    print(platform.system())
 
     active_reminder = False
     alert_window = None
@@ -286,8 +292,17 @@ def launch_gui():
 
     # GUI Init
     root = Window(themename="journal")
+
+    # Set the window size based on the DPI
+    dpi = root.winfo_fpixels('1i')
+    scale = dpi / 96  # baseline DPI
+
+    base_width, base_height = 750, 300
+    scaled_width = int(base_width * scale)
+    scaled_height = int(base_height * scale)
+    root.geometry(f"{scaled_width}x{scaled_height}")
+
     root.title(f"{app_config['title']} | {app_config['version']}")
-    root.geometry("750x300")
     root.resizable(False, False)
 
 

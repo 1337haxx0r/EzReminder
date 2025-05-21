@@ -5,7 +5,8 @@ from datetime import datetime, time as dt_time
 import time as time_module
 
 from database.DatabaseManager import DatabaseManager
-from config.config import app_config
+from config.user_config import save_user_config, load_user_config
+from logic.UpdateManager import check_for_updates
 
 import json
 import os
@@ -19,11 +20,65 @@ def launch_gui():
     active_reminder = False
     alert_window = None
 
+    user_config = load_user_config()
+    app_config = user_config['app']
 
-    db = DatabaseManager()
+    db = None  # ✅ Make it accessible everywhere
+    db_connected = False
 
-    #date_format = "%Y-%m-%d"
+    try:
+        db = DatabaseManager()
+        db_connected = True
+    except Exception as e:
+        print(f"❌ DB Connection failed: {e}")
+
+
     date_format = "%m/%d/%Y"
+
+    def open_settings():
+        settings_window = Toplevel(root)
+        settings_window.title("Settings")
+        settings_window.geometry("350x350")
+        settings_window.resizable(False, False)
+
+        current_config = load_user_config()
+
+        entries = {}
+        row = 0
+        for section, fields in current_config.items():
+            for key, value in fields.items():
+                Label(settings_window, text=f"{section}.{key}").grid(row=row, column=0, sticky='w', padx=10, pady=5)
+                entry = Entry(settings_window, width=30)
+                entry.insert(0, value)
+                entry.grid(row=row, column=1, padx=10, pady=5)
+
+                if key == "version":
+                    entry.config(state='disabled')  # Don't allow editing version
+
+                entries[f"{section}.{key}"] = entry
+                row += 1
+
+        def save_changes():
+            for full_key, entry in entries.items():
+                section, key = full_key.split('.')
+                current_config[section][key] = entry.get()
+
+            save_user_config(current_config)
+
+            # Try reconnecting the database
+            nonlocal db, db_connected
+            try:
+                db = DatabaseManager()
+                db_connected = True
+                connection_banner.grid_remove()  # ✅ Hide banner once connected
+                update_reminder_list()
+                messagebox.showinfo("Settings", "Settings saved and database connection successful.")
+                settings_window.destroy()
+
+            except Exception as e:
+                messagebox.showerror("Database Error", f"Connection failed:\n{e}")
+
+        Button(settings_window, text="Save", command=save_changes).grid(row=row, column=0, columnspan=2, pady=10)
 
 
     def show_alert(text):
@@ -100,6 +155,9 @@ def launch_gui():
 
     def update_reminder_list():
         reminder_list.delete(0, 'end')
+
+        if not db:
+            return  # don't do anything if db is not ready
 
         today = datetime.today()
         start_of_day = int(datetime(today.year, today.month, today.day, 0, 0, 1).timestamp())
@@ -232,6 +290,8 @@ def launch_gui():
     root.geometry("750x300")
     root.resizable(False, False)
 
+
+
     # ----------------------------
     # Top Menu
     # ----------------------------
@@ -240,7 +300,7 @@ def launch_gui():
 
     root.file_menu = Menu(top_menu, tearoff=0)
     top_menu.add_cascade(label='Application', menu=root.file_menu)
-    root.file_menu.add_command(label='Settings', command=lambda: messagebox.showinfo("Settings", "To be added"))
+    root.file_menu.add_command(label='Settings', command=open_settings)
     root.file_menu.add_separator()
     root.file_menu.add_command(label='Exit', command=root.quit)
 
@@ -248,8 +308,11 @@ def launch_gui():
     top_menu.add_cascade(label='Help', menu=root.help_menu)
     root.help_menu.add_command(label='About', command=lambda: messagebox.showinfo("About",
                                                                                   f"{app_config['title']} | {app_config['version']}"))
-    root.help_menu.add_command(label='Check for updates',
-                               command=lambda: messagebox.showinfo("Updates", "Update checking not implemented yet."))
+    root.help_menu.add_command(
+        label='Check for updates',
+        command=lambda: check_for_updates(app_config, progressbar, root)
+    )
+
     root.help_menu.add_separator()
     root.help_menu.add_command(label='Debug', command=lambda: messagebox.showinfo("Debug", "To be added"))
 
@@ -258,6 +321,11 @@ def launch_gui():
     # ----------------------------
     datetime_label = Label(root, text="", font=("Helvetica", 16))
     datetime_label.grid(row=0, column=0, columnspan=6, pady=10)
+
+    connection_banner = Label(root, text="", font=("Helvetica", 10), anchor="center", background="red",
+                              foreground="white")
+    connection_banner.grid(row=1, column=0, columnspan=7, sticky='we', pady=(0, 5))
+    connection_banner.grid_remove()  # hidden by default
 
     reminder_entry = Entry(root, width=50)
     reminder_entry.grid(row=2, column=1, padx=10)
@@ -295,14 +363,19 @@ def launch_gui():
         datetime_label.config(text=current_time)
         root.after(1000, update_datetime)
 
-
     update_datetime()
-    update_reminder_list()
+    if db_connected:
+        update_reminder_list()
 
+    # ✅ Show settings only if DB failed
+    if not db_connected:
+        connection_banner.config(text="⚠️ Could not connect to the database. Please check your settings.")
+        connection_banner.grid()
+        root.after(100, open_settings)
 
     def monitor_reminders():
         while True:
-            if not active_reminder:
+            if db and not active_reminder:  # ✅ only run if DB is connected
                 now = int(time_module.time())
                 reminders = db.get_all_reminders()
                 for r in reminders:
